@@ -1,0 +1,1094 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ptolemy Chat</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#161922; --panel2:#1d2130; --line:#282d3d;
+  --text:#e7e9f0; --muted:#8b93a7; --accent:#5865f2; --accent2:#4752c4;
+  --danger:#e05260;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);font-size:15px}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea{font:inherit}
+.hidden{display:none !important}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.center{text-align:center}
+.pad{padding:24px}
+
+
+/* ---------- Auth ---------- */
+.auth-wrap{height:100%;display:grid;place-items:center;padding:20px;
+  background:radial-gradient(circle at 50% 0%,#1b2036,#0f1115 60%)}
+.auth-card{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:28px}
+.auth-card h1{margin:0 0 4px;font-size:24px}
+.tabs{display:flex;gap:8px;margin:18px 0}
+.tab{flex:1;padding:8px;border-radius:8px;background:var(--panel2);color:var(--muted);font-size:14px}
+.tab.active{background:var(--accent);color:#fff}
+label{display:block;margin-bottom:12px;font-size:13px;color:var(--muted)}
+input,textarea{width:100%;margin-top:6px;padding:10px 12px;border-radius:8px;
+  border:1px solid var(--line);background:#0d0f15;color:var(--text);outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+.btn{padding:10px 14px;border-radius:8px;font-weight:600;font-size:14px;transition:background .15s}
+.btn.primary{background:var(--accent);color:#fff;width:100%}
+.btn.primary:hover{background:var(--accent2)}
+.btn.primary:disabled{opacity:.6;cursor:default}
+.btn.ghost{background:var(--panel2);color:var(--text);width:100%;font-weight:500}
+.btn.ghost:hover{background:#232838}
+.error{color:var(--danger);font-size:13px;min-height:18px;margin:10px 0 0;line-height:1.35}
+
+
+/* ---------- App shell ---------- */
+.app{display:grid;grid-template-columns:260px 1fr;height:100vh}
+.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;
+  flex-direction:column;padding:14px;gap:12px;min-height:0}
+.brand{font-weight:700;font-size:16px;padding:4px 6px}
+.server-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.server-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;
+  color:var(--muted);text-align:left;width:100%;font-size:14px;overflow:hidden}
+.server-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.server-item:hover{background:var(--panel2);color:var(--text)}
+.server-item.active{background:var(--accent);color:#fff}
+.sidebar-actions{display:flex;flex-direction:column;gap:6px}
+.sidebar-actions .btn{font-size:13px;padding:8px}
+.me{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;
+  background:var(--panel2);cursor:pointer;width:100%;text-align:left}
+.me:hover{background:#232838}
+.me-info{min-width:0}
+#me-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
+.server-title{font-weight:700}
+.invite{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.invite code{background:var(--panel2);padding:3px 7px;border-radius:6px;
+  color:var(--text);letter-spacing:1.5px;font-weight:600}
+.mini{background:var(--panel2);border-radius:6px;padding:3px 8px;font-size:12px}
+.mini:hover{background:#232838}
+
+
+.messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:16px}
+.msg{display:flex;gap:10px}
+.avatar{border-radius:50%;object-fit:cover;flex:none;display:grid;place-items:center;
+  color:#fff;font-weight:700;overflow:hidden}
+.msg-body{min-width:0;flex:1}
+.msg-head{display:flex;align-items:baseline;gap:8px}
+.msg-name{font-weight:600;font-size:14px}
+.msg-time{font-size:11px;color:var(--muted)}
+.msg-del{margin-left:auto;color:var(--muted);font-size:13px;opacity:0;padding:0 4px}
+.msg:hover .msg-del{opacity:1}
+.msg-del:hover{color:var(--danger)}
+.msg-text{font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;
+  overflow-wrap:anywhere}
+.msg-text a{color:#8ba3ff}
+.att-img{max-width:320px;max-height:320px;border-radius:10px;margin-top:8px;display:block}
+.att-vid{max-width:420px;width:100%;border-radius:10px;margin-top:8px;display:block}
+.att-audio{max-width:320px;margin-top:8px;display:block}
+.att-file{display:inline-flex;gap:8px;align-items:center;margin-top:8px;padding:10px 12px;
+  border-radius:8px;background:var(--panel2);color:var(--text);text-decoration:none;
+  font-size:14px;border:1px solid var(--line);max-width:100%}
+.att-file:hover{border-color:var(--accent)}
+
+
+.composer{padding:12px 20px 18px;border-top:1px solid var(--line)}
+.composer-row{display:flex;gap:8px;align-items:flex-end;background:var(--panel2);
+  border-radius:12px;padding:8px}
+#msg-input{background:transparent;border:none;resize:none;max-height:160px;
+  padding:6px 4px;line-height:1.4}
+.icon-btn{font-size:18px;padding:6px;border-radius:6px}
+.icon-btn:hover{background:#2a3045}
+#btn-send{width:auto;padding:9px 18px}
+.attach-chip{display:flex;align-items:center;gap:8px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;
+  margin-bottom:8px;width:fit-content;max-width:100%}
+.attach-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
+.empty{flex:1;display:grid;place-items:center;color:var(--muted);padding:24px;text-align:center}
+
+
+/* ---------- Modal ---------- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:grid;
+  place-items:center;padding:20px;z-index:50}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:22px;width:100%;max-width:420px;max-height:90vh;overflow:auto}
+.modal h2{margin:0 0 16px;font-size:18px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.modal-actions .btn{width:auto}
+.preview-row{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+
+
+@media (max-width: 720px){
+  .app{grid-template-columns:76px 1fr}
+  .brand,.me-info,.server-item span{display:none}
+  .server-item{justify-content:center}
+  .sidebar-actions .btn{font-size:0;padding:10px 0}
+  .sidebar-actions .btn::first-letter{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+
+<!-- ================= AUTH SCREEN ================= -->
+<div id="auth-screen" class="auth-wrap">
+  <div class="auth-card">
+    <h1>Ptolemy Chat</h1>
+    <p class="muted small" style="margin:0">Sign in, or create an account.</p>
+
+
+    <div class="tabs">
+      <button class="tab active" data-tab="signin" type="button">Sign in</button>
+      <button class="tab" data-tab="signup" type="button">Create account</button>
+    </div>
+
+
+    <form id="auth-form">
+      <label id="username-field" class="hidden">Username
+        <input id="auth-username" type="text" autocomplete="username"
+               placeholder="3–20 letters, numbers, underscore" maxlength="20">
+      </label>
+      <label>Email
+        <input id="auth-email" type="email" autocomplete="email"
+               placeholder="you@example.com" required>
+      </label>
+      <label>Password
+        <input id="auth-password" type="password" autocomplete="current-password"
+               placeholder="At least 6 characters" required>
+      </label>
+      <button class="btn primary" id="auth-submit" type="submit">Sign in</button>
+      <p class="error" id="auth-error"></p>
+    </form>
+  </div>
+</div>
+
+
+<!-- ================= MAIN APP ================= -->
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">Ptolemy Chat</div>
+
+
+    <div class="server-list" id="server-list"></div>
+
+
+    <div class="sidebar-actions">
+      <button class="btn ghost" id="btn-create" type="button">+ Create server</button>
+      <button class="btn ghost" id="btn-join" type="button">Join with code</button>
+    </div>
+
+
+    <button class="me" id="me" type="button">
+      <span id="me-avatar"></span>
+      <span class="me-info">
+        <span id="me-name">…</span>
+        <span class="muted small" style="display:block">Settings</span>
+      </span>
+    </button>
+  </aside>
+
+
+  <main class="main">
+    <header class="topbar">
+      <div id="server-title" class="server-title">Select a server</div>
+      <div class="invite hidden" id="invite">
+        Invite code: <code id="invite-code"></code>
+        <button class="mini" id="btn-copy" type="button">Copy</button>
+      </div>
+    </header>
+
+
+    <div class="messages hidden" id="messages"></div>
+
+
+    <form class="composer hidden" id="composer">
+      <div class="attach-chip hidden" id="attach-chip">
+        <span id="attach-name"></span>
+        <button type="button" id="attach-remove">✕</button>
+      </div>
+      <div class="composer-row">
+        <button type="button" class="icon-btn" id="btn-attach" title="Attach a file">📎</button>
+        <textarea id="msg-input" rows="1" placeholder="Write a message…"></textarea>
+        <button type="submit" class="btn primary" id="btn-send">Send</button>
+      </div>
+      <input type="file" id="file-input" class="hidden">
+    </form>
+
+
+    <div class="empty" id="empty-state">
+      Pick a server on the left, create one, or join one with an invite code.
+    </div>
+  </main>
+</div>
+
+
+<!-- ================= MODAL ================= -->
+<div class="modal-backdrop hidden" id="modal">
+  <div class="modal" id="modal-box"></div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   CONFIG — paste your two values here
+   ============================================================ */
+const SUPABASE_URL      = 'https://vrhnqziiemflitdjartw.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_gvJGBGWMiZbfS9aCff4m8g_IaL3rHFI';
+
+
+const MAX_FILE_BYTES  = 50 * 1024 * 1024;  // 50 MB
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;  // 5 MB
+const POLL_MS = 6000;                      // backup refresh interval
+
+
+/* ============================================================
+   Setup
+   ============================================================ */
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+
+const state = {
+  user: null,
+  profile: null,
+  servers: [],
+  currentServer: null,
+  channel: null,
+  pendingFile: null,
+  rendered: new Set(),
+  profileCache: new Map(),
+  lastTs: null,
+  pollTimer: null
+};
+
+
+const el = id => document.getElementById(id);
+
+
+/* ============================================================
+   Small helpers
+   ============================================================ */
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+
+function linkify(escaped){
+  return escaped.replace(/(https?:\/\/[^\s<]+)/g,
+    url => '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>');
+}
+
+
+function colorFor(str){
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360;
+  return 'hsl(' + h + ', 55%, 48%)';
+}
+
+
+function avatarHtml(profile, size){
+  const name = (profile && profile.username) ? profile.username : '?';
+  const url  = profile && profile.avatar_url;
+  const style = 'width:' + size + 'px;height:' + size + 'px;';
+  if (url){
+    return '<img class="avatar" style="' + style + '" src="' + esc(url) + '" alt="">';
+  }
+  return '<div class="avatar" style="' + style + 'background:' + colorFor(name) +
+         ';font-size:' + Math.round(size * 0.45) + 'px">' +
+         esc(name.charAt(0).toUpperCase()) + '</div>';
+}
+
+
+function uuid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+
+function randomCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const buf = new Uint32Array(6);
+  (window.crypto || {}).getRandomValues
+    ? crypto.getRandomValues(buf)
+    : buf.forEach((_, i) => buf[i] = Math.floor(Math.random() * 1e9));
+  return Array.from(buf).map(n => chars[n % chars.length]).join('');
+}
+
+
+function safeName(name){
+  return String(name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
+}
+
+
+function formatTime(iso){
+  const d = new Date(iso), now = new Date();
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === now.toDateString()
+    ? time
+    : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' · ' + time;
+}
+
+
+function scrollToBottom(){
+  const m = el('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+
+/* ============================================================
+   Modal plumbing
+   ============================================================ */
+function showModal(html){
+  el('modal-box').innerHTML = html;
+  el('modal').classList.remove('hidden');
+  el('modal-box').querySelectorAll('[data-close]').forEach(b =>
+    b.addEventListener('click', closeModal));
+}
+function closeModal(){
+  el('modal').classList.add('hidden');
+  el('modal-box').innerHTML = '';
+}
+el('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+
+
+/* ============================================================
+   Authentication
+   ============================================================ */
+let authMode = 'signin';
+
+
+function setAuthMode(mode){
+  authMode = mode;
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === mode));
+  el('username-field').classList.toggle('hidden', mode !== 'signup');
+  el('auth-submit').textContent = mode === 'signup' ? 'Create account' : 'Sign in';
+  el('auth-password').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+  setAuthError('');
+}
+
+
+document.querySelectorAll('.tab').forEach(t =>
+  t.addEventListener('click', () => setAuthMode(t.dataset.tab)));
+
+
+function setAuthError(msg){ el('auth-error').textContent = msg || ''; }
+
+
+el('auth-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email    = el('auth-email').value.trim();
+  const password = el('auth-password').value;
+  const username = el('auth-username').value.trim();
+  setAuthError('');
+
+
+  if (SUPABASE_URL.indexOf('PASTE_') === 0){
+    return setAuthError('Configuration missing: paste your Supabase URL and anon key at the top of the script.');
+  }
+
+
+  el('auth-submit').disabled = true;
+  try {
+    if (authMode === 'signup'){
+      if (!/^[A-Za-z0-9_]{3,20}$/.test(username)){
+        return setAuthError('Username must be 3–20 characters: letters, numbers, or underscore.');
+      }
+      if (password.length < 6){
+        return setAuthError('Password must be at least 6 characters.');
+      }
+
+
+      const { data: taken, error: checkErr } = await db
+        .from('profiles').select('id').eq('username', username).maybeSingle();
+      if (checkErr) return setAuthError(checkErr.message);
+      if (taken) return setAuthError('That username is already taken.');
+
+
+      const { data, error } = await db.auth.signUp({
+        email, password,
+        options: { data: { username } }
+      });
+      if (error) return setAuthError(error.message);
+      if (!data.session){
+        return setAuthError('Account created. Check your email for a confirmation link, then sign in.');
+      }
+    } else {
+      const { error } = await db.auth.signInWithPassword({ email, password });
+      if (error) return setAuthError(error.message);
+    }
+  } finally {
+    el('auth-submit').disabled = false;
+  }
+});
+
+
+/* ---------- session lifecycle ---------- */
+db.auth.getSession().then(({ data }) => {
+  if (data.session && data.session.user){
+    state.user = data.session.user;
+    startApp();
+  } else {
+    setAuthMode('signin');
+  }
+});
+
+
+db.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT'){
+    teardown();
+    return;
+  }
+  if (session && session.user &&
+      (!state.user || state.user.id !== session.user.id)){
+    state.user = session.user;
+    setTimeout(startApp, 0);
+  }
+});
+
+
+function teardown(){
+  if (state.channel){ db.removeChannel(state.channel); state.channel = null; }
+  if (state.pollTimer){ clearInterval(state.pollTimer); state.pollTimer = null; }
+  state.user = null; state.profile = null; state.servers = [];
+  state.currentServer = null; state.rendered = new Set();
+  state.profileCache = new Map(); state.lastTs = null;
+
+
+  el('app').classList.add('hidden');
+  el('auth-screen').classList.remove('hidden');
+  el('auth-password').value = '';
+  setAuthError('');
+}
+
+
+async function startApp(){
+  el('auth-screen').classList.add('hidden');
+  el('app').classList.remove('hidden');
+  await ensureProfile();
+  renderMe();
+  await loadServers();
+  if (!state.pollTimer) state.pollTimer = setInterval(pollNew, POLL_MS);
+}
+
+
+/* ============================================================
+   Profile
+   ============================================================ */
+async function ensureProfile(){
+  const { data, error } = await db.from('profiles').select('*')
+    .eq('id', state.user.id).maybeSingle();
+  if (error){ console.error(error); }
+
+
+  if (data){
+    state.profile = data;
+  } else {
+    const fallback = ((state.user.user_metadata && state.user.user_metadata.username)
+      || (state.user.email || 'user').split('@')[0]).slice(0, 20);
+    const { data: created } = await db.from('profiles')
+      .insert({ id: state.user.id, username: fallback }).select().maybeSingle();
+    state.profile = created || { id: state.user.id, username: fallback, avatar_url: null };
+  }
+  state.profileCache.set(state.profile.id, state.profile);
+}
+
+
+function renderMe(){
+  el('me-avatar').innerHTML = avatarHtml(state.profile, 34);
+  el('me-name').textContent = state.profile ? state.profile.username : '…';
+}
+
+
+el('me').addEventListener('click', openProfileModal);
+
+
+function openProfileModal(){
+  showModal(
+    '<h2>Your profile</h2>' +
+    '<div class="preview-row">' +
+      '<div id="m-avatar-preview">' + avatarHtml(state.profile, 64) + '</div>' +
+      '<div><label style="margin:0">Profile picture' +
+        '<input id="m-avatar" type="file" accept="image/*">' +
+      '</label></div>' +
+    '</div>' +
+    '<label>Username' +
+      '<input id="m-username" maxlength="20" value="' + esc(state.profile.username) + '">' +
+    '</label>' +
+    '<p class="error" id="m-error"></p>' +
+    '<div class="modal-actions">' +
+      '<button class="btn ghost" id="m-signout" style="width:auto">Sign out</button>' +
+      '<button class="btn ghost" data-close style="width:auto">Cancel</button>' +
+      '<button class="btn primary" id="m-save" style="width:auto">Save</button>' +
+    '</div>'
+  );
+
+
+  el('m-avatar').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    el('m-avatar-preview').innerHTML =
+      '<img class="avatar" style="width:64px;height:64px" src="' + URL.createObjectURL(f) + '" alt="">';
+  });
+
+
+  el('m-signout').addEventListener('click', async () => {
+    closeModal();
+    await db.auth.signOut();
+  });
+
+
+  el('m-save').addEventListener('click', saveProfile);
+}
+
+
+async function saveProfile(){
+  const errEl = el('m-error');
+  errEl.textContent = '';
+  const newName = el('m-username').value.trim();
+  const file = el('m-avatar').files[0];
+
+
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(newName)){
+    errEl.textContent = 'Username must be 3–20 characters: letters, numbers, or underscore.';
+    return;
+  }
+  if (file && !file.type.startsWith('image/')){
+    errEl.textContent = 'Please choose an image file for your picture.';
+    return;
+  }
+  if (file && file.size > MAX_AVATAR_BYTES){
+    errEl.textContent = 'Please keep profile pictures under 5 MB.';
+    return;
+  }
+
+
+  const btn = el('m-save');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+
+  try {
+    let avatarUrl = state.profile.avatar_url;
+
+
+    if (newName !== state.profile.username){
+      const { data: taken, error: checkErr } = await db.from('profiles')
+        .select('id').eq('username', newName).maybeSingle();
+      if (checkErr) throw checkErr;
+      if (taken && taken.id !== state.user.id) throw new Error('That username is already taken.');
+    }
+
+
+    if (file){
+      const path = state.user.id + '/avatar-' + Date.now() + '-' + safeName(file.name);
+      const { error: upErr } = await db.storage.from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = db.storage.from('avatars').getPublicUrl(path);
+      avatarUrl = pub.publicUrl;
+    }
+
+
+    const { error } = await db.from('profiles')
+      .update({ username: newName, avatar_url: avatarUrl })
+      .eq('id', state.user.id);
+    if (error) throw error;
+
+
+    state.profile.username = newName;
+    state.profile.avatar_url = avatarUrl;
+    state.profileCache.set(state.profile.id, state.profile);
+    renderMe();
+    closeModal();
+  } catch (err){
+    errEl.textContent = err.message || 'Could not save your profile.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
+
+
+/* ============================================================
+   Servers
+   ============================================================ */
+async function loadServers(){
+  const { data, error } = await db.from('server_members')
+    .select('server_id, joined_at, servers(id, name, owner_id, join_code)')
+    .eq('user_id', state.user.id)
+    .order('joined_at', { ascending: true });
+
+
+  if (error){ console.error(error); return; }
+
+
+  state.servers = (data || []).map(r => r.servers).filter(Boolean);
+  renderServers();
+
+
+  if (!state.currentServer && state.servers.length){
+    openServer(state.servers[0]);
+  } else if (state.currentServer){
+    const stillThere = state.servers.find(s => s.id === state.currentServer.id);
+    if (!stillThere) closeServer();
+  } else if (!state.servers.length){
+    closeServer();
+  }
+}
+
+
+function renderServers(){
+  const list = el('server-list');
+  list.innerHTML = '';
+  state.servers.forEach(s => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'server-item' + (state.currentServer && s.id === state.currentServer.id ? ' active' : '');
+    b.innerHTML = '<span># ' + esc(s.name) + '</span>';
+    b.addEventListener('click', () => openServer(s));
+    list.appendChild(b);
+  });
+}
+
+
+function closeServer(){
+  state.currentServer = null;
+  if (state.channel){ db.removeChannel(state.channel); state.channel = null; }
+  el('server-title').textContent = 'Select a server';
+  el('invite').classList.add('hidden');
+  el('messages').classList.add('hidden');
+  el('composer').classList.add('hidden');
+  el('empty-state').classList.remove('hidden');
+  renderServers();
+}
+
+
+async function openServer(server){
+  state.currentServer = server;
+  renderServers();
+
+
+  el('server-title').textContent = '# ' + server.name;
+  el('invite-code').textContent = server.join_code;
+  el('invite').classList.remove('hidden');
+  el('empty-state').classList.add('hidden');
+  el('messages').classList.remove('hidden');
+  el('composer').classList.remove('hidden');
+  el('messages').innerHTML = '<div class="muted center pad">Loading messages…</div>';
+
+
+  clearPendingFile();
+  el('msg-input').value = '';
+  el('msg-input').style.height = 'auto';
+
+
+  await loadMessages(server.id);
+  subscribe(server.id);
+}
+
+
+el('btn-copy').addEventListener('click', async () => {
+  if (!state.currentServer) return;
+  try {
+    await navigator.clipboard.writeText(state.currentServer.join_code);
+    el('btn-copy').textContent = 'Copied!';
+    setTimeout(() => el('btn-copy').textContent = 'Copy', 1200);
+  } catch {
+    prompt('Copy this invite code:', state.currentServer.join_code);
+  }
+});
+
+
+el('btn-create').addEventListener('click', () => {
+  showModal(
+    '<h2>Create a server</h2>' +
+    '<label>Server name<input id="m-server-name" maxlength="40" placeholder="e.g. Study Group"></label>' +
+    '<p class="error" id="m-error"></p>' +
+    '<div class="modal-actions">' +
+      '<button class="btn ghost" data-close style="width:auto">Cancel</button>' +
+      '<button class="btn primary" id="m-create-go" style="width:auto">Create</button>' +
+    '</div>'
+  );
+  el('m-server-name').focus();
+  el('m-server-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); createServer(); }
+  });
+  el('m-create-go').addEventListener('click', createServer);
+});
+
+
+async function createServer(){
+  const name = el('m-server-name').value.trim();
+  if (!name){ el('m-error').textContent = 'Give your server a name.'; return; }
+
+
+  const btn = el('m-create-go');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const { data, error } = await db.from('servers')
+      .insert({ name, owner_id: state.user.id, join_code: randomCode() })
+      .select().single();
+    if (error) throw error;
+
+
+    const { error: memberErr } = await db.from('server_members')
+      .insert({ server_id: data.id, user_id: state.user.id });
+    if (memberErr) throw memberErr;
+
+
+    closeModal();
+    await loadServers();
+    const created = state.servers.find(s => s.id === data.id) || data;
+    openServer(created);
+  } catch (err){
+    el('m-error').textContent = err.message || 'Could not create that server.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create';
+  }
+}
+
+
+el('btn-join').addEventListener('click', () => {
+  showModal(
+    '<h2>Join a server</h2>' +
+    '<label>Invite code<input id="m-code" maxlength="12" placeholder="e.g. K7QM2P" style="text-transform:uppercase"></label>' +
+    '<p class="error" id="m-error"></p>' +
+    '<div class="modal-actions">' +
+      '<button class="btn ghost" data-close style="width:auto">Cancel</button>' +
+      '<button class="btn primary" id="m-join-go" style="width:auto">Join</button>' +
+    '</div>'
+  );
+  el('m-code').focus();
+  el('m-code').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); joinServer(); }
+  });
+  el('m-join-go').addEventListener('click', joinServer);
+});
+
+
+async function joinServer(){
+  const code = el('m-code').value.trim().toUpperCase();
+  if (!code){ el('m-error').textContent = 'Enter an invite code.'; return; }
+
+
+  const btn = el('m-join-go');
+  btn.disabled = true; btn.textContent = 'Joining…';
+  try {
+    const { data: serverId, error } = await db.rpc('join_server_by_code', { code });
+    if (error) throw error;
+
+
+    closeModal();
+    await loadServers();
+    const joined = state.servers.find(s => s.id === serverId);
+    if (joined) openServer(joined);
+  } catch (err){
+    el('m-error').textContent = err.message || 'Could not join that server.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Join';
+  }
+}
+
+
+/* ============================================================
+   Messages
+   ============================================================ */
+async function loadMessages(serverId){
+  const { data, error } = await db.from('messages')
+    .select('*, profiles(username, avatar_url)')
+    .eq('server_id', serverId)
+    .order('created_at', { ascending: true })
+    .limit(300);
+
+
+  if (error){
+    el('messages').innerHTML = '<div class="muted center pad">Could not load messages: ' +
+      esc(error.message) + '</div>';
+    return;
+  }
+
+
+  state.rendered = new Set();
+  state.lastTs = null;
+  el('messages').innerHTML = '';
+
+
+  if (!data.length){
+    el('messages').innerHTML = '<div class="muted center pad">No messages yet. Say hello!</div>';
+  } else {
+    data.forEach(m => appendMessage(m, false));
+  }
+  scrollToBottom();
+}
+
+
+function appendMessage(m, animate){
+  if (state.rendered.has(m.id)) return;
+  state.rendered.add(m.id);
+
+
+  const container = el('messages');
+  const placeholder = container.querySelector('.center.pad');
+  if (placeholder) placeholder.remove();
+
+
+  const p = m.profiles || state.profileCache.get(m.user_id) || { username: 'unknown' };
+  if (m.profiles) state.profileCache.set(m.user_id, m.profiles);
+
+
+  const wrap = document.createElement('div');
+  wrap.className = 'msg';
+  wrap.dataset.id = m.id;
+  wrap.style.opacity = animate ? '0' : '1';
+  wrap.style.transition = 'opacity .18s ease';
+
+
+  let html = avatarHtml(p, 38);
+  html += '<div class="msg-body">';
+  html += '<div class="msg-head">';
+  html += '<span class="msg-name">' + esc(p.username) + '</span>';
+  html += '<span class="msg-time">' + esc(formatTime(m.created_at)) + '</span>';
+  if (m.user_id === state.user.id){
+    html += '<button class="msg-del" title="Delete message" type="button">✕</button>';
+  }
+  html += '</div>';
+
+
+  if (m.content){
+    html += '<div class="msg-text">' + linkify(esc(m.content)) + '</div>';
+  }
+  html += attachmentHtml(m);
+  html += '</div>';
+
+
+  wrap.innerHTML = html;
+  container.appendChild(wrap);
+
+
+  if (animate) requestAnimationFrame(() => { wrap.style.opacity = '1'; });
+
+
+  if (!state.lastTs || m.created_at > state.lastTs) state.lastTs = m.created_at;
+}
+
+
+function attachmentHtml(m){
+  if (!m.file_url) return '';
+  const name = esc(m.file_name || 'file');
+  const type = m.file_type || '';
+  const url  = esc(m.file_url);
+
+
+  if (type.startsWith('image/')){
+    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' +
+           '<img class="att-img" src="' + url + '" alt="' + name + '" loading="lazy"></a>';
+  }
+  if (type.startsWith('video/')){
+    return '<video class="att-vid" controls preload="metadata" src="' + url + '"></video>';
+  }
+  if (type.startsWith('audio/')){
+    return '<audio class="att-audio" controls src="' + url + '"></audio>';
+  }
+  return '<a class="att-file" href="' + url + '" target="_blank" rel="noopener noreferrer">' +
+         '📄 ' + name + '</a>';
+}
+
+
+/* delete a message (own only) */
+el('messages').addEventListener('click', async e => {
+  const btn = e.target.closest('.msg-del');
+  if (!btn) return;
+  const wrap = btn.closest('.msg');
+  const id = wrap.dataset.id;
+  if (!confirm('Delete this message?')) return;
+
+
+  const { error } = await db.from('messages').delete().eq('id', id);
+  if (error){ alert(error.message); return; }
+  state.rendered.delete(id);
+  wrap.remove();
+});
+
+
+/* live updates */
+function subscribe(serverId){
+  if (state.channel){ db.removeChannel(state.channel); state.channel = null; }
+
+
+  state.channel = db.channel('messages-' + serverId)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'messages', filter: 'server_id=eq.' + serverId },
+      payload => handleIncoming(payload.new))
+    .subscribe();
+}
+
+
+async function handleIncoming(m){
+  if (!state.currentServer || m.server_id !== state.currentServer.id) return;
+  if (state.rendered.has(m.id)) return;
+
+
+  let p = state.profileCache.get(m.user_id);
+  if (!p){
+    const { data } = await db.from('profiles')
+      .select('username, avatar_url').eq('id', m.user_id).maybeSingle();
+    p = data || { username: 'unknown' };
+    state.profileCache.set(m.user_id, p);
+  }
+  appendMessage(Object.assign({}, m, { profiles: p }), true);
+  scrollToBottom();
+}
+
+
+/* backup refresh in case realtime is unavailable */
+async function pollNew(){
+  if (!state.currentServer || document.hidden) return;
+  const serverId = state.currentServer.id;
+  let query = db.from('messages')
+    .select('*, profiles(username, avatar_url)')
+    .eq('server_id', serverId)
+    .order('created_at', { ascending: true })
+    .limit(50);
+  if (state.lastTs) query = query.gt('created_at', state.lastTs);
+
+
+  const { data, error } = await query;
+  if (error || !data || !data.length) return;
+  if (!state.currentServer || state.currentServer.id !== serverId) return;
+
+
+  data.forEach(m => { if (!state.rendered.has(m.id)) appendMessage(m, true); });
+  scrollToBottom();
+}
+
+
+/* ============================================================
+   Composer
+   ============================================================ */
+const msgInput = el('msg-input');
+
+
+msgInput.addEventListener('input', () => {
+  msgInput.style.height = 'auto';
+  msgInput.style.height = Math.min(msgInput.scrollHeight, 160) + 'px';
+});
+
+
+msgInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    el('composer').requestSubmit();
+  }
+});
+
+
+el('btn-attach').addEventListener('click', () => el('file-input').click());
+
+
+el('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > MAX_FILE_BYTES){
+    alert('That file is ' + (file.size / 1048576).toFixed(1) +
+          ' MB. The limit is 50 MB per file.');
+    e.target.value = '';
+    return;
+  }
+  state.pendingFile = file;
+  el('attach-name').textContent = '📎 ' + file.name;
+  el('attach-chip').classList.remove('hidden');
+});
+
+
+el('attach-remove').addEventListener('click', clearPendingFile);
+
+
+function clearPendingFile(){
+  state.pendingFile = null;
+  el('file-input').value = '';
+  el('attach-chip').classList.add('hidden');
+  el('attach-name').textContent = '';
+}
+
+
+el('composer').addEventListener('submit', async e => {
+  e.preventDefault();
+  await sendMessage();
+});
+
+
+async function sendMessage(){
+  if (!state.currentServer) return;
+
+
+  const text = msgInput.value.trim();
+  const file = state.pendingFile;
+  if (!text && !file) return;
+
+
+  const btn = el('btn-send');
+  btn.disabled = true;
+  btn.textContent = file ? 'Uploading…' : 'Sending…';
+
+
+  const payload = {
+    server_id: state.currentServer.id,
+    user_id: state.user.id,
+    content: text || null
+  };
+
+
+  try {
+    if (file){
+      if (file.size > MAX_FILE_BYTES) throw new Error('That file is larger than 50 MB.');
+      const path = state.user.id + '/' + uuid() + '-' + safeName(file.name);
+      const { error: upErr } = await db.storage.from('attachments').upload(path, file, {
+        upsert: false,
+        contentType: file.type || 'application/octet-stream'
+      });
+      if (upErr) throw upErr;
+
+
+      const { data: pub } = db.storage.from('attachments').getPublicUrl(path);
+      payload.file_url  = pub.publicUrl;
+      payload.file_name = file.name;
+      payload.file_type = file.type || '';
+      payload.file_size = file.size;
+    }
+
+
+    const { data, error } = await db.from('messages')
+      .insert(payload)
+      .select('*, profiles(username, avatar_url)')
+      .single();
+    if (error) throw error;
+
+
+    appendMessage(data, true);
+    msgInput.value = '';
+    msgInput.style.height = 'auto';
+    clearPendingFile();
+    scrollToBottom();
+  } catch (err){
+    alert(err.message || 'Could not send that message.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send';
+  }
+}
+</script>
+</body>
+</html>
